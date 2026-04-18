@@ -36,6 +36,11 @@
   var isOpen = false;
   var isLoading = false;
 
+  // -- Load marked.js for markdown rendering --
+  var markedScript = document.createElement('script');
+  markedScript.src = 'https://cdn.jsdelivr.net/npm/marked/marked.min.js';
+  document.head.appendChild(markedScript);
+
   // -- Inject Styles --
   var style = document.createElement('style');
   style.textContent =
@@ -46,9 +51,15 @@
     '#scw-header{background:#2563eb;color:#fff;padding:14px 16px;font-size:15px;font-weight:600;display:flex;justify-content:space-between;align-items:center}' +
     '#scw-close{background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:0;line-height:1}' +
     '#scw-messages{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}' +
-    '.scw-msg{max-width:80%;padding:8px 12px;border-radius:12px;font-size:14px;line-height:1.4;word-wrap:break-word;white-space:pre-wrap}' +
-    '.scw-msg.user{align-self:flex-end;background:#2563eb;color:#fff;border-bottom-right-radius:4px}' +
+    '.scw-msg{max-width:80%;padding:8px 12px;border-radius:12px;font-size:14px;line-height:1.4;word-wrap:break-word}' +
+    '.scw-msg.user{align-self:flex-end;background:#2563eb;color:#fff;border-bottom-right-radius:4px;white-space:pre-wrap}' +
     '.scw-msg.assistant{align-self:flex-start;background:#f1f5f9;color:#1e293b;border-bottom-left-radius:4px}' +
+    '.scw-msg.assistant p{margin:0 0 6px}' +
+    '.scw-msg.assistant p:last-child{margin-bottom:0}' +
+    '.scw-msg.assistant ol,.scw-msg.assistant ul{margin:4px 0;padding-left:18px}' +
+    '.scw-msg.assistant li{margin-bottom:4px}' +
+    '.scw-msg.assistant img{max-width:100%;border-radius:6px;margin-top:4px;display:block}' +
+    '.scw-msg.assistant strong{font-weight:600}' +
     '#scw-input-area{display:flex;padding:10px;border-top:1px solid #e2e8f0;gap:8px}' +
     '#scw-input{flex:1;border:1px solid #cbd5e1;border-radius:8px;padding:8px 12px;font-size:14px;outline:none;font-family:inherit;resize:none}' +
     '#scw-input:focus{border-color:#2563eb}' +
@@ -104,7 +115,10 @@
   function renderMessages() {
     var html = '';
     for (var i = 0; i < messages.length; i++) {
-      html += '<div class="scw-msg ' + messages[i].role + '">' + escapeHtml(messages[i].content) + '</div>';
+      var content = messages[i].role === 'assistant' && window.marked
+        ? window.marked.parse(messages[i].content)
+        : escapeHtml(messages[i].content);
+      html += '<div class="scw-msg ' + messages[i].role + '">' + content + '</div>';
     }
     if (isLoading) {
       html += '<div class="scw-typing">Typing\u2026</div>';
