@@ -7,8 +7,32 @@
   var API_KEY = script.getAttribute('data-api-key') || '';
 
   // -- State --
-  var CHAT_ID = 'chat_' + Math.random().toString(36).substring(2, 11);
-  var messages = []; // { role: 'user'|'assistant', content: string }
+  var TIMEOUT_MS = 30 * 60 * 1000;
+
+  function loadOrInitState() {
+    var storedId = localStorage.getItem('scw_chat_id');
+    var storedMsgs = localStorage.getItem('scw_messages');
+    var lastActivity = parseInt(localStorage.getItem('scw_last_activity') || '0', 10);
+    if (storedId && storedMsgs && (Date.now() - lastActivity) < TIMEOUT_MS) {
+      try {
+        return { chatId: storedId, messages: JSON.parse(storedMsgs) };
+      } catch (e) {}
+    }
+    var newId = 'chat_' + Math.random().toString(36).substring(2, 11);
+    localStorage.setItem('scw_chat_id', newId);
+    localStorage.setItem('scw_messages', '[]');
+    localStorage.setItem('scw_last_activity', String(Date.now()));
+    return { chatId: newId, messages: [] };
+  }
+
+  function saveToStorage() {
+    localStorage.setItem('scw_messages', JSON.stringify(messages));
+    localStorage.setItem('scw_last_activity', String(Date.now()));
+  }
+
+  var state = loadOrInitState();
+  var CHAT_ID = state.chatId;
+  var messages = state.messages;
   var isOpen = false;
   var isLoading = false;
 
@@ -62,6 +86,8 @@
     if (e.key === 'Enter' && !isLoading) sendMessage();
   };
 
+  renderMessages();
+
   // -- Functions --
   function toggleWindow() {
     isOpen = !isOpen;
@@ -88,14 +114,9 @@
   }
 
   function buildApiMessages() {
-    // Clone messages, prepend chat_id to the first message's content
-    var apiMsgs = [];
+    var apiMsgs = [{ role: 'system', content: 'chat_id:' + CHAT_ID }];
     for (var i = 0; i < messages.length; i++) {
-      var content = messages[i].content;
-      if (i === 0) {
-        content = 'chat_id:' + CHAT_ID + ' ' + content;
-      }
-      apiMsgs.push({ role: messages[i].role, content: content });
+      apiMsgs.push({ role: messages[i].role, content: messages[i].content });
     }
     return apiMsgs;
   }
@@ -105,6 +126,7 @@
     if (!text || isLoading) return;
 
     messages.push({ role: 'user', content: text });
+    saveToStorage();
     input.value = '';
     isLoading = true;
     sendBtn.disabled = true;
@@ -127,9 +149,11 @@
         ? data.choices[0].message.content
         : 'No response';
       messages.push({ role: 'assistant', content: reply });
+      saveToStorage();
     } catch (err) {
       console.error('Chat widget error:', err);
       messages.push({ role: 'assistant', content: 'Sorry, something went wrong. Please try again.' });
+      saveToStorage();
     }
 
     isLoading = false;
