@@ -113,7 +113,7 @@
   }
 
   function renderMessages() {
-    var html = '';
+    var html = '<div class="scw-msg assistant">Hello! How can I help you today?</div>';
     for (var i = 0; i < messages.length; i++) {
       var content = messages[i].role === 'assistant' && window.marked
         ? window.marked.parse(messages[i].content)
